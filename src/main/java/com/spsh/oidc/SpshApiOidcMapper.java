@@ -82,6 +82,10 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
         String extractJsonPath = mappingModel.getConfig().get(EXTRACT_JSON_PATH);
         String userJwtToken = userSession.getNote("access_token");
 
+        LOGGER.info(String.format("Using fetchUrl: %s", fetchUrl));
+        LOGGER.info(String.format("Using extractJsonPath: %s", extractJsonPath));
+        LOGGER.info(String.format("Using userJwtToken: %s", userJwtToken));
+
         if (fetchUrl == null) {
             LOGGER.warn("SpshApiOidcMapper: fetchUrl is null. No data will be fetched, extracted and mapped.");
             return;
