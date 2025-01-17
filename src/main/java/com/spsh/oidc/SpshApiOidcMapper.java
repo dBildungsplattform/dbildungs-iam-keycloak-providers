@@ -4,10 +4,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.jboss.logging.Logger;
 import org.keycloak.models.ClientSessionContext;
 import org.keycloak.models.KeycloakSession;
@@ -80,11 +82,11 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
       ClientSessionContext clientSessionCtx) {
         String fetchUrl = mappingModel.getConfig().get(FETCH_URL);
         String extractJsonPath = mappingModel.getConfig().get(EXTRACT_JSON_PATH);
-        String userJwtToken = userSession.getNote("access_token");
+        String userSub = userSession.getUser().getId();
 
         LOGGER.info(String.format("Using fetchUrl: %s", fetchUrl));
         LOGGER.info(String.format("Using extractJsonPath: %s", extractJsonPath));
-        LOGGER.info(String.format("Using userJwtToken: %s", userJwtToken));
+        LOGGER.info(String.format("Using userSub: %s", userSub));
 
         if (fetchUrl == null) {
             LOGGER.warn("SpshApiOidcMapper: fetchUrl is null. No data will be fetched, extracted and mapped.");
@@ -94,13 +96,13 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
             LOGGER.warn("SpshApiOidcMapper: extractJsonPath is null. No data will be fetched, extracted and mapped.");
             return;
         }
-        if (userJwtToken == null) {
-            LOGGER.warn("SpshApiOidcMapper: userJwtToken is null. No data will be fetched, extracted and mapped.");
+        if (userSub == null) {
+            LOGGER.warn("SpshApiOidcMapper: userSub is null. No data will be fetched, extracted and mapped.");
             return;
         }
 
         try {
-            String responseData = fetchApiData(fetchUrl, userJwtToken);
+            String responseData = fetchApiData(fetchUrl, userSub);
             String extractedValue = extractFromJson(responseData, extractJsonPath);
             if (extractedValue != null) {
                 OIDCAttributeMapperHelper.mapClaim(token, mappingModel, extractedValue);
@@ -111,10 +113,12 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
 
     }
 
-    private String fetchApiData(String url, String userJwtToken) throws IOException {
+    private String fetchApiData(String url, String userSub) throws IOException {
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-            HttpGet request = new HttpGet(url);
-            request.addHeader("Authorization", "Bearer " + userJwtToken);
+            HttpPost request = new HttpPost(url);
+            request.setHeader("Content-Type", "application/json");
+            StringEntity requestBody = new StringEntity(String.format("{\"sub\":\"%s\"}", userSub));
+            request.setEntity(requestBody);
 
             return httpClient.execute(request, response -> {
                 int statusCode = response.getCode();
