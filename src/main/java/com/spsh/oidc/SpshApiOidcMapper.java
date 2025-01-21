@@ -3,7 +3,6 @@ package com.spsh.oidc;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
@@ -26,11 +25,13 @@ import com.jayway.jsonpath.JsonPath;
 
 public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OIDCAccessTokenMapper, OIDCIDTokenMapper, UserInfoTokenMapper {
 
-    private static final Logger LOGGER = Logger.getLogger(SpshApiOidcMapper.class);
+
+    public static final String ENV_KEY_INTERNAL_COMMUNICATION_API_KEY = "INTERNAL_COMMUNICATION_API_KEY";
     public static final String PROVIDER_ID = "spsh-custom-oidc-api-mapper";
-    private static final List<ProviderConfigProperty> configProperties = new ArrayList<>();
     public static final String FETCH_URL = "fetchUrl";
     public static final String EXTRACT_JSON_PATH = "extractJsonPath";
+    private static final List<ProviderConfigProperty> configProperties = new ArrayList<>();
+    private static final Logger LOGGER = Logger.getLogger(SpshApiOidcMapper.class);
 
     static {
         OIDCAttributeMapperHelper.addTokenClaimNameConfig(configProperties);
@@ -114,9 +115,16 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
     }
 
     private String fetchApiData(String url, String userSub) throws IOException {
+
+        String apiKey = System.getenv(ENV_KEY_INTERNAL_COMMUNICATION_API_KEY);
+        if (apiKey == null || apiKey.isEmpty()) {
+            throw new IOException(String.format("Environment variable %s is not set or is empty.", ENV_KEY_INTERNAL_COMMUNICATION_API_KEY));
+        }
+
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             HttpPost request = new HttpPost(url);
             request.setHeader("Content-Type", "application/json");
+            request.setHeader("api-key", apiKey);
             StringEntity requestBody = new StringEntity(String.format("{\"sub\":\"%s\"}", userSub));
             request.setEntity(requestBody);
 
