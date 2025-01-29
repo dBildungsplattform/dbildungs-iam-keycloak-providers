@@ -85,9 +85,10 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
         String extractJsonPath = mappingModel.getConfig().get(EXTRACT_JSON_PATH);
         String userSub = userSession.getUser().getId();
 
-        LOGGER.info(String.format("Using fetchUrl: %s", fetchUrl));
-        LOGGER.info(String.format("Using extractJsonPath: %s", extractJsonPath));
-        LOGGER.info(String.format("Using userSub: %s", userSub));
+        LOGGER.info(String.format("Setting claims via custom SpshApiOidcMapper for userSub: %s", userSub));
+        LOGGER.debug(String.format("Using fetchUrl: %s", fetchUrl));
+        LOGGER.debug(String.format("Using extractJsonPath: %s", extractJsonPath));
+        LOGGER.debug(String.format("Using userSub: %s", userSub));
 
         if (fetchUrl == null) {
             LOGGER.warn("SpshApiOidcMapper: fetchUrl is null. No data will be fetched, extracted and mapped.");
