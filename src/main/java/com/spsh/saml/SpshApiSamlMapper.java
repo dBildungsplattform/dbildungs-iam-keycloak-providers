@@ -1,43 +1,30 @@
-package com.spsh.oidc;
+package com.spsh.saml;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.HttpEntity;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.jboss.logging.Logger;
-import org.keycloak.models.ClientSessionContext;
+import org.keycloak.dom.saml.v2.assertion.AttributeStatementType;
+import org.keycloak.dom.saml.v2.assertion.AttributeStatementType.ASTChoiceType;
+import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ProtocolMapperModel;
 import org.keycloak.models.UserSessionModel;
-import org.keycloak.protocol.oidc.mappers.AbstractOIDCProtocolMapper;
-import org.keycloak.protocol.oidc.mappers.OIDCAccessTokenMapper;
-import org.keycloak.protocol.oidc.mappers.OIDCAttributeMapperHelper;
-import org.keycloak.protocol.oidc.mappers.OIDCIDTokenMapper;
-import org.keycloak.protocol.oidc.mappers.UserInfoTokenMapper;
+import org.keycloak.protocol.saml.mappers.AbstractSAMLProtocolMapper;
+import org.keycloak.protocol.saml.mappers.SAMLAttributeStatementMapper;
 import org.keycloak.provider.ProviderConfigProperty;
-import org.keycloak.representations.IDToken;
-import com.jayway.jsonpath.JsonPath;
 import com.spsh.util.ApiFetchHelper;
+import org.keycloak.dom.saml.v2.assertion.AttributeType;
 
-public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OIDCAccessTokenMapper, OIDCIDTokenMapper, UserInfoTokenMapper {
-
+public class SpshApiSamlMapper extends AbstractSAMLProtocolMapper implements SAMLAttributeStatementMapper {
 
     public static final String ENV_KEY_INTERNAL_COMMUNICATION_API_KEY = "INTERNAL_COMMUNICATION_API_KEY";
-    public static final String PROVIDER_ID = "spsh-custom-oidc-api-mapper";
+    public static final String PROVIDER_ID = "spsh-custom-saml-api-mapper";
     public static final String FETCH_URL = "fetchUrl";
     public static final String EXTRACT_JSON_PATH = "extractJsonPath";
     private static final List<ProviderConfigProperty> configProperties = new ArrayList<>();
-    private static final Logger LOGGER = Logger.getLogger(SpshApiOidcMapper.class);
+    private static final Logger LOGGER = Logger.getLogger(SpshApiSamlMapper.class);
 
     static {
-        OIDCAttributeMapperHelper.addTokenClaimNameConfig(configProperties);
-        OIDCAttributeMapperHelper.addIncludeInTokensConfig(configProperties, SpshApiOidcMapper.class);
-
         ProviderConfigProperty fetchUrlProperty = new ProviderConfigProperty();
         fetchUrlProperty.setName(FETCH_URL);
         fetchUrlProperty.setLabel("SPSH Fetch Url");
@@ -55,17 +42,17 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
 
     @Override
     public String getDisplayCategory() {
-        return "Token Mapper";
+        return "Attribute Mapper";
     }
 
     @Override
     public String getDisplayType() {
-        return "SPSH Custom OIDC Api Mapper";
+        return "SPSH Custom SAML Api Mapper";
     }
 
     @Override
     public String getHelpText() {
-        return "The mapper calls the provided SPSH fetch url, extracts the provided JsonPath from the api response and maps the result if not null to the claim";
+        return "The mapper calls the provided SPSH fetch URL, extracts the JSON path from the API response, and maps the result if not null to the SAML assertion.";
     }
 
     @Override
@@ -79,14 +66,14 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
     }
 
     @Override
-    protected void setClaim(IDToken token, ProtocolMapperModel mappingModel,
-      UserSessionModel userSession, KeycloakSession keycloakSession,
-      ClientSessionContext clientSessionCtx) {
+    public void transformAttributeStatement(AttributeStatementType attributeStatement, ProtocolMapperModel mappingModel,
+        KeycloakSession session, UserSessionModel userSession, AuthenticatedClientSessionModel clientSession) {
+
         String fetchUrl = mappingModel.getConfig().get(FETCH_URL);
         String extractJsonPath = mappingModel.getConfig().get(EXTRACT_JSON_PATH);
         String userSub = userSession.getUser().getId();
 
-        LOGGER.info(String.format("Setting claims via custom SpshApiOidcMapper for userSub: %s", userSub));
+        LOGGER.info(String.format("Setting SAML attribute via custom SpshApiSamlMapper for userSub: %s", userSub));
         LOGGER.debug(String.format("Using fetchUrl: %s", fetchUrl));
         LOGGER.debug(String.format("Using extractJsonPath: %s", extractJsonPath));
         LOGGER.debug(String.format("Using userSub: %s", userSub));
@@ -108,11 +95,13 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
             String responseData = ApiFetchHelper.fetchApiData(fetchUrl, userSub);
             String extractedValue = ApiFetchHelper.extractFromJson(responseData, extractJsonPath);
             if (extractedValue != null) {
-                OIDCAttributeMapperHelper.mapClaim(token, mappingModel, extractedValue);
+                AttributeType samlAttribute = new AttributeType(mappingModel.getName());
+                samlAttribute.addAttributeValue(extractedValue);
+                ASTChoiceType attributeChoice = new ASTChoiceType(samlAttribute);
+                attributeStatement.addAttribute(attributeChoice);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Error fetching or processing API data", e);
         }
-
     }
 }
