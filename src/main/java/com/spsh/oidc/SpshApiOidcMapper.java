@@ -24,6 +24,8 @@ import org.keycloak.representations.IDToken;
 import com.jayway.jsonpath.JsonPath;
 import com.spsh.util.ApiFetchHelper;
 
+import jakarta.ws.rs.InternalServerErrorException;
+
 public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OIDCAccessTokenMapper, OIDCIDTokenMapper, UserInfoTokenMapper {
 
 
@@ -31,6 +33,7 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
     public static final String PROVIDER_ID = "spsh-custom-oidc-api-mapper";
     public static final String FETCH_URL = "fetchUrl";
     public static final String EXTRACT_JSON_PATH = "extractJsonPath";
+    public static final String IGNORE_MISSING_PATH = "ignoreMissingPath";
     private static final List<ProviderConfigProperty> configProperties = new ArrayList<>();
     private static final Logger LOGGER = Logger.getLogger(SpshApiOidcMapper.class);
 
@@ -51,6 +54,13 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
         extractPathProperty.setType(ProviderConfigProperty.STRING_TYPE);
         extractPathProperty.setHelpText("The JSON path to extract data from the API response.");
         configProperties.add(extractPathProperty);
+
+        ProviderConfigProperty ignoreMissingPathProperty = new ProviderConfigProperty();
+        ignoreMissingPathProperty.setName(IGNORE_MISSING_PATH);
+        ignoreMissingPathProperty.setLabel("SPSH Ignore Missing Path");
+        ignoreMissingPathProperty.setType(ProviderConfigProperty.BOOLEAN_TYPE);
+        ignoreMissingPathProperty.setHelpText("If JSON Path cannot be found in response received from Backend, do not throw an error, just ignore it.");
+        configProperties.add(ignoreMissingPathProperty);
     }
 
     @Override
@@ -84,6 +94,7 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
       ClientSessionContext clientSessionCtx) {
         String fetchUrl = mappingModel.getConfig().get(FETCH_URL);
         String extractJsonPath = mappingModel.getConfig().get(EXTRACT_JSON_PATH);
+        boolean ignoreMissingPath = Boolean.parseBoolean(mappingModel.getConfig().getOrDefault(IGNORE_MISSING_PATH, "false"));
         String userSub = userSession.getUser().getId();
 
         LOGGER.info(String.format("Setting claims via custom SpshApiOidcMapper for userSub: %s", userSub));
@@ -106,6 +117,14 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
 
         try {
             String responseData = ApiFetchHelper.fetchApiData(fetchUrl, userSub);
+            boolean isExisting = ApiFetchHelper.isPathExisting(responseData, extractJsonPath);
+            if(!isExisting && ignoreMissingPath) {
+                LOGGER.info(String.format("Ignoring due to configuration that JSON Path %s does not exist in response", extractJsonPath));
+                return;
+            }
+            if(!isExisting && !ignoreMissingPath) {
+                throw new InternalServerErrorException(String.format("JSON Path %s does not exist in response: %s", extractJsonPath, responseData));
+            }
             String extractedValue = ApiFetchHelper.extractFromJson(responseData, extractJsonPath);
             if (extractedValue != null) {
                 OIDCAttributeMapperHelper.mapClaim(token, mappingModel, extractedValue);

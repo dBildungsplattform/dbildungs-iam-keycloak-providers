@@ -39,6 +39,15 @@ public class ApiFetchHelper {
         }
     }
 
+    public static boolean isPathExisting(String jsonData, String jsonPath) {
+        try{
+            JsonPath.read(jsonData, jsonPath);
+            return true;
+        } catch(com.jayway.jsonpath.PathNotFoundException e) {
+            return false;
+        }
+    }
+
     public static String extractFromJson(String jsonData, String jsonPath) {
         return JsonPath.read(jsonData, jsonPath).toString();
     }
