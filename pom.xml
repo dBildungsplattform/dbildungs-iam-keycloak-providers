@@ -6,7 +6,7 @@
 
     <groupId>com.spsh</groupId>
     <artifactId>keycloak-providers</artifactId>
-    <version>1.4</version>
+    <version>1.8</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -19,36 +19,36 @@
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-core</artifactId>
             <scope>provided</scope>
-            <version>26.1.4</version>
+            <version>26.2.5</version>
         </dependency>
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-saml-core</artifactId>
-            <version>26.1.4</version>
+            <version>26.2.5</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-server-spi</artifactId>
             <scope>provided</scope>
-            <version>26.1.4</version>
+            <version>26.2.5</version>
         </dependency>
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-server-spi-private</artifactId>
             <scope>provided</scope>
-            <version>26.1.4</version>
+            <version>26.2.5</version>
         </dependency>
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-services</artifactId>
             <scope>provided</scope>
-            <version>26.1.4</version>
+            <version>26.2.5</version>
         </dependency>
         <dependency>
         <groupId>org.apache.httpcomponents.client5</groupId>
         <artifactId>httpclient5</artifactId>
-        <version>5.4.1</version>
+        <version>5.5</version>
         </dependency>
         <dependency>
             <groupId>com.jayway.jsonpath</groupId>
