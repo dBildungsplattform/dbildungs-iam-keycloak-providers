@@ -1,12 +1,14 @@
 package com.spsh.util;
 
 import java.io.IOException;
+
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.StringEntity;
+
 import com.jayway.jsonpath.JsonPath;
 
 public class ApiFetchHelper {
@@ -48,8 +50,8 @@ public class ApiFetchHelper {
         }
     }
 
-    public static String extractFromJson(String jsonData, String jsonPath) {
-        return JsonPath.read(jsonData, jsonPath).toString();
+    public static Object extractFromJson(String jsonData, String jsonPath) {
+        return JsonPath.read(jsonData, jsonPath);
     }
 }
 

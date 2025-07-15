@@ -1,19 +1,14 @@
 package com.spsh.oidc;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.HttpEntity;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.hc.core5.http.io.entity.StringEntity;
+
 import org.jboss.logging.Logger;
 import org.keycloak.models.ClientSessionContext;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ProtocolMapperModel;
 import org.keycloak.models.UserSessionModel;
+import org.keycloak.protocol.ProtocolMapperUtils;
 import org.keycloak.protocol.oidc.mappers.AbstractOIDCProtocolMapper;
 import org.keycloak.protocol.oidc.mappers.OIDCAccessTokenMapper;
 import org.keycloak.protocol.oidc.mappers.OIDCAttributeMapperHelper;
@@ -21,7 +16,7 @@ import org.keycloak.protocol.oidc.mappers.OIDCIDTokenMapper;
 import org.keycloak.protocol.oidc.mappers.UserInfoTokenMapper;
 import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.representations.IDToken;
-import com.jayway.jsonpath.JsonPath;
+
 import com.spsh.util.ApiFetchHelper;
 
 import jakarta.ws.rs.InternalServerErrorException;
@@ -40,6 +35,13 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
     static {
         OIDCAttributeMapperHelper.addTokenClaimNameConfig(configProperties);
         OIDCAttributeMapperHelper.addIncludeInTokensConfig(configProperties, SpshApiOidcMapper.class);
+
+        ProviderConfigProperty multivaluedProperty = new ProviderConfigProperty();
+        multivaluedProperty.setName(ProtocolMapperUtils.MULTIVALUED);
+        multivaluedProperty.setLabel(ProtocolMapperUtils.MULTIVALUED_LABEL);
+        multivaluedProperty.setType(ProviderConfigProperty.BOOLEAN_TYPE);
+        multivaluedProperty.setHelpText(ProtocolMapperUtils.MULTIVALUED_HELP_TEXT);
+        configProperties.add(multivaluedProperty);
 
         ProviderConfigProperty fetchUrlProperty = new ProviderConfigProperty();
         fetchUrlProperty.setName(FETCH_URL);
@@ -125,7 +127,7 @@ public class SpshApiOidcMapper extends AbstractOIDCProtocolMapper implements OID
             if(!isExisting && !ignoreMissingPath) {
                 throw new InternalServerErrorException(String.format("JSON Path %s does not exist in response: %s", extractJsonPath, responseData));
             }
-            String extractedValue = ApiFetchHelper.extractFromJson(responseData, extractJsonPath);
+            Object extractedValue = ApiFetchHelper.extractFromJson(responseData, extractJsonPath);
             if (extractedValue != null) {
                 OIDCAttributeMapperHelper.mapClaim(token, mappingModel, extractedValue);
             }

@@ -2,9 +2,11 @@ package com.spsh.saml;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import org.jboss.logging.Logger;
 import org.keycloak.dom.saml.v2.assertion.AttributeStatementType;
 import org.keycloak.dom.saml.v2.assertion.AttributeStatementType.ASTChoiceType;
+import org.keycloak.dom.saml.v2.assertion.AttributeType;
 import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ProtocolMapperModel;
@@ -12,8 +14,8 @@ import org.keycloak.models.UserSessionModel;
 import org.keycloak.protocol.saml.mappers.AbstractSAMLProtocolMapper;
 import org.keycloak.protocol.saml.mappers.SAMLAttributeStatementMapper;
 import org.keycloak.provider.ProviderConfigProperty;
+
 import com.spsh.util.ApiFetchHelper;
-import org.keycloak.dom.saml.v2.assertion.AttributeType;
 
 public class SpshApiSamlMapper extends AbstractSAMLProtocolMapper implements SAMLAttributeStatementMapper {
 
@@ -93,7 +95,7 @@ public class SpshApiSamlMapper extends AbstractSAMLProtocolMapper implements SAM
 
         try {
             String responseData = ApiFetchHelper.fetchApiData(fetchUrl, userSub);
-            String extractedValue = ApiFetchHelper.extractFromJson(responseData, extractJsonPath);
+            Object extractedValue = ApiFetchHelper.extractFromJson(responseData, extractJsonPath);
             if (extractedValue != null) {
                 AttributeType samlAttribute = new AttributeType(mappingModel.getName());
                 samlAttribute.addAttributeValue(extractedValue);
