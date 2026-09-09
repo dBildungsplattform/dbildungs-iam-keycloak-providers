@@ -23,6 +23,8 @@ public class SpshApiSamlMapper extends AbstractSAMLProtocolMapper implements SAM
     public static final String PROVIDER_ID = "spsh-custom-saml-api-mapper";
     public static final String FETCH_URL = "fetchUrl";
     public static final String EXTRACT_JSON_PATH = "extractJsonPath";
+    public static final String KEYCLOAK_CLIENT = "keycloakClient";
+    public static final String INCLUDE_EMAIL_ADDRESS = "includeEmailAddress";
     private static final List<ProviderConfigProperty> configProperties = new ArrayList<>();
     private static final Logger LOGGER = Logger.getLogger(SpshApiSamlMapper.class);
 
@@ -40,6 +42,20 @@ public class SpshApiSamlMapper extends AbstractSAMLProtocolMapper implements SAM
         extractPathProperty.setType(ProviderConfigProperty.STRING_TYPE);
         extractPathProperty.setHelpText("The JSON path to extract data from the API response.");
         configProperties.add(extractPathProperty);
+
+        ProviderConfigProperty keycloakClientProperty = new ProviderConfigProperty();
+        keycloakClientProperty.setName(KEYCLOAK_CLIENT);
+        keycloakClientProperty.setLabel("SPSH Keycloak Client");
+        keycloakClientProperty.setType(ProviderConfigProperty.STRING_TYPE);
+        keycloakClientProperty.setHelpText("The keycloakClient identifier to send to the Backend. If left empty, the client ID of the current session is used.");
+        configProperties.add(keycloakClientProperty);
+
+        ProviderConfigProperty includeEmailAddressProperty = new ProviderConfigProperty();
+        includeEmailAddressProperty.setName(INCLUDE_EMAIL_ADDRESS);
+        includeEmailAddressProperty.setLabel("SPSH Include Email Address");
+        includeEmailAddressProperty.setType(ProviderConfigProperty.BOOLEAN_TYPE);
+        includeEmailAddressProperty.setHelpText("Whether to request the user's email address from the Backend.");
+        configProperties.add(includeEmailAddressProperty);
     }
 
     @Override
@@ -73,12 +89,19 @@ public class SpshApiSamlMapper extends AbstractSAMLProtocolMapper implements SAM
 
         String fetchUrl = mappingModel.getConfig().get(FETCH_URL);
         String extractJsonPath = mappingModel.getConfig().get(EXTRACT_JSON_PATH);
+        boolean includeEmailAddress = Boolean.parseBoolean(mappingModel.getConfig().getOrDefault(INCLUDE_EMAIL_ADDRESS, "false"));
+        String configuredKeycloakClient = mappingModel.getConfig().get(KEYCLOAK_CLIENT);
+        String defaultKeycloakClient = clientSession.getClient().getClientId();
+        String keycloakClient = (configuredKeycloakClient == null || configuredKeycloakClient.isEmpty())
+            ? defaultKeycloakClient : configuredKeycloakClient;
         String userSub = userSession.getUser().getId();
 
         LOGGER.info(String.format("Setting SAML attribute via custom SpshApiSamlMapper for userSub: %s", userSub));
         LOGGER.debug(String.format("Using fetchUrl: %s", fetchUrl));
         LOGGER.debug(String.format("Using extractJsonPath: %s", extractJsonPath));
         LOGGER.debug(String.format("Using userSub: %s", userSub));
+        LOGGER.debug(String.format("Using keycloakClient: %s", keycloakClient));
+        LOGGER.debug(String.format("Using includeEmailAddress: %b", includeEmailAddress));
 
         if (fetchUrl == null) {
             LOGGER.warn("SpshApiOidcMapper: fetchUrl is null. No data will be fetched, extracted and mapped.");
@@ -94,7 +117,7 @@ public class SpshApiSamlMapper extends AbstractSAMLProtocolMapper implements SAM
         }
 
         try {
-            String responseData = ApiFetchHelper.fetchApiData(fetchUrl, userSub);
+            String responseData = ApiFetchHelper.fetchApiData(fetchUrl, userSub, keycloakClient, includeEmailAddress);
             Object extractedValue = ApiFetchHelper.extractFromJson(responseData, extractJsonPath);
             if (extractedValue != null) {
                 AttributeType samlAttribute = new AttributeType(mappingModel.getName());
